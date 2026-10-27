@@ -194,6 +194,20 @@ tr.yr td{background:var(--bg);font-size:11px;color:var(--muted);text-align:left;
 .day.h4.today{border-color:var(--ink)}
 .calnote{font-size:11px;color:var(--muted);margin:8px 2px 0;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .calnote i{display:inline-block;width:14px;height:10px;border-radius:3px;border:1px solid var(--line)}
+/* 日々タブは入力欄とカレンダーが1画面に収まるように詰める */
+.daily .mnav{margin-bottom:6px}
+.daily .mnav h1{font-size:18px}
+.daily .iconbtn{width:36px;height:36px;font-size:16px}
+.daily .sec{margin-bottom:12px}
+.daily .sec-h{margin-bottom:4px}
+.daily .entry{gap:8px;padding:8px 10px}
+.daily .inrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:8px}
+.daily .entry .big{font-size:20px;padding:6px 10px}
+.daily .paybtns .btn{min-height:42px}
+.daily .cal{gap:3px}
+.daily .day{min-height:42px;padding:3px 3px 2px}
+.daily .day.today{padding:2px 2px 1px}
+.daily .calnote{margin-top:6px}
 
 .toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:30;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion: no-preference){
@@ -469,27 +483,16 @@ function backupNote(){
 function viewDaily(){
   const m = ui.month, s = st.settings, t = todayD();
   if (!ui.day || !ui.day.startsWith(m + '-')) ui.day = defaultDay(m);
-  const d = ui.day, tot = monthDaily(m), row = rowFor(m);
+  const d = ui.day, tot = monthDaily(m);
   const tgt = { paypay:num(s.dailyPaypay), cash:num(s.dailyCash) };
-  const miniPart = k => `<span><i class="dot ${k}"></i>${PAYS[k]} <b class="num">${yen(tot[k])}</b>${tgt[k] > 0 ? `<span class="num"> / ${yen(tgt[k])}</span>` : ''}</span>`;
-  let h = `<div class="mnav"><button class="iconbtn" data-act="prev" aria-label="前の月">‹</button><h1>${mLabel(m)}</h1><button class="iconbtn" data-act="next" aria-label="次の月">›</button></div>
-  <div class="mini">${miniPart('paypay')}${miniPart('cash')}</div>`;
+  let h = `<div class="daily"><div class="mnav"><button class="iconbtn" data-act="prev" aria-label="前の月">‹</button><h1>${mLabel(m)}</h1><button class="iconbtn" data-act="next" aria-label="次の月">›</button></div>`;
 
   // entry
   h += `<section class="sec"><div class="sec-h"><h2>${dLabel(d)}${d === t ? ' ・ 今日' : ''}</h2>${d !== t ? '<button class="link" data-act="today">今日へ</button>' : ''}</div>
   <div class="list"><div class="pad entry">
-    <input class="amt num big" id="d-amt" type="text" inputmode="numeric" autocomplete="off" placeholder="金額" aria-label="金額">
-    <input class="txt" id="d-memo" type="text" autocomplete="off" placeholder="メモ（なくてもOK）" aria-label="メモ">
+    <div class="inrow"><input class="amt num big" id="d-amt" type="text" inputmode="numeric" autocomplete="off" placeholder="金額" aria-label="金額"><input class="txt" id="d-memo" type="text" autocomplete="off" placeholder="メモ（任意）" aria-label="メモ"></div>
     <div class="paybtns"><button class="btn primary" data-act="addEntry" data-pay="paypay">PayPayで記録</button><button class="btn alt" data-act="addEntry" data-pay="cash">現金で記録</button></div>
   </div></div></section>`;
-
-  // entries of the day
-  const list = st.daily[d] || [];
-  if (list.length){
-    h += `<section class="sec"><div class="sec-h"><h2>この日の記録</h2><span class="num">${yen(dayTotal(d))}</span></div><div class="list">`;
-    list.forEach(e => h += `<div class="erow"><i class="dot ${e.pay}" aria-hidden="true"></i><div class="m">${e.memo ? esc(e.memo) : `<span class="muted">${PAYS[e.pay]}</span>`}${e.memo ? `<div class="p">${PAYS[e.pay]}</div>` : ''}</div><span class="num">${yen(e.amount)}</span><button class="x" data-act="delEntry" data-d="${d}" data-id="${esc(e.id)}" aria-label="削除">×</button></div>`);
-    h += `</div></section>`;
-  }
 
   // calendar
   const dim = daysIn(m), [y, mo] = m.split('-').map(Number), off = new Date(y, mo - 1, 1).getDay();
@@ -506,17 +509,22 @@ function viewDaily(){
   }
   h += `</div><p class="calnote"><i style="background:color-mix(in srgb,var(--accent) 14%,var(--surface))"></i><i style="background:color-mix(in srgb,var(--accent) 30%,var(--surface))"></i><i style="background:color-mix(in srgb,var(--accent) 52%,var(--surface))"></i><i style="background:color-mix(in srgb,var(--accent) 80%,var(--surface))"></i>&nbsp;${tgtSum > 0 ? `濃いほど使った日（1日の目安 <span class="num">${yen(base)}</span> が基準）` : '濃いほど使った日（今月の平均が基準）'}</p></section>`;
 
-  // month summary
-  const cardNote = row.anyCard ? '月の画面の入力' : row.cardEst ? '見込み額' : '未入力';
-  const rest = k => tgt[k] > 0 ? `<span class="note">目安 ${yen(tgt[k])} ・ ${tot[k] <= tgt[k] ? 'あと ' + yen(tgt[k] - tot[k]) : `<span class="neg">${yen(tot[k] - tgt[k])} オーバー</span>`}</span>` : '';
-  h += `<section class="sec"><div class="sec-h"><h2>${mShort(m)}のまとめ</h2></div><div class="list">
-    <div class="field"><label><span><i class="dot paypay"></i>PayPay</span>${rest('paypay')}</label><span class="num" style="text-align:right">${yen(tot.paypay)}</span></div>
-    <div class="field"><label><span><i class="dot cash"></i>現金</span>${rest('cash')}</label><span class="num" style="text-align:right">${yen(tot.cash)}</span></div>
-    <div class="field"><label>カード<span class="note">今月の引き落とし額（${cardNote}） ・<button class="link" style="padding:0;font-size:11px" data-act="tab" data-tab="month">月の画面へ</button></span></label><span class="num" style="text-align:right">${yen(row.cardTotal)}</span></div>
-    <div class="sum big"><span><b>合計</b></span><span class="num">${yen(tot.paypay + tot.cash + row.cardTotal)}</span></div>
-  </div><p class="help">PASMOのチャージはカードの請求に入るので、ここには記録しません。${tgtSum > 0 ? '' : '目安は設定から入れられます。'}</p></section>`;
+  // entries of the day
+  const list = st.daily[d] || [];
+  h += `<section class="sec"><div class="sec-h"><h2>${dLabel(d)}の記録</h2><span class="num">${list.length ? yen(dayTotal(d)) : ''}</span></div><div class="list">`;
+  if (list.length) list.forEach(e => h += `<div class="erow"><i class="dot ${e.pay}" aria-hidden="true"></i><div class="m">${e.memo ? esc(e.memo) : `<span class="muted">${PAYS[e.pay]}</span>`}${e.memo ? `<div class="p">${PAYS[e.pay]}</div>` : ''}</div><span class="num">${yen(e.amount)}</span><button class="x" data-act="delEntry" data-d="${d}" data-id="${esc(e.id)}" aria-label="削除">×</button></div>`);
+  else h += `<div class="pad small muted">記録はありません</div>`;
+  h += `</div></section>`;
 
-  h += backupNote();
+  // month summary
+  const restTxt = (v, g) => g > 0 ? `<span class="note">目安 ${yen(g)} ・ ${v <= g ? 'あと ' + yen(g - v) : `<span class="neg">${yen(v - g)} オーバー</span>`}</span>` : '';
+  h += `<section class="sec"><div class="sec-h"><h2>${mShort(m)}のまとめ</h2></div><div class="list">
+    <div class="field"><label><span><i class="dot paypay"></i>PayPay</span>${restTxt(tot.paypay, tgt.paypay)}</label><span class="num" style="text-align:right">${yen(tot.paypay)}</span></div>
+    <div class="field"><label><span><i class="dot cash"></i>現金</span>${restTxt(tot.cash, tgt.cash)}</label><span class="num" style="text-align:right">${yen(tot.cash)}</span></div>
+    <div class="sum big"><span><b>合計</b>${restTxt(tot.paypay + tot.cash, tgtSum).replace('class="note"', 'class="note" style="display:block;font-size:11px;color:var(--muted)"')}</span><span class="num">${yen(tot.paypay + tot.cash)}</span></div>
+  </div><p class="help">日々の出費の目安です。PayPayもカードの請求に入るので、月の残高の計算には使いません。${tgtSum > 0 ? '' : '目安は設定から入れられます。'}</p></section>`;
+
+  h += backupNote() + '</div>';
   app.innerHTML = h;
 }
 function addEntry(pay){
