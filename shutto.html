@@ -522,7 +522,7 @@ function viewDaily(){
     <div class="field"><label><span><i class="dot paypay"></i>PayPay</span>${restTxt(tot.paypay, tgt.paypay)}</label><span class="num" style="text-align:right">${yen(tot.paypay)}</span></div>
     <div class="field"><label><span><i class="dot cash"></i>現金</span>${restTxt(tot.cash, tgt.cash)}</label><span class="num" style="text-align:right">${yen(tot.cash)}</span></div>
     <div class="sum big"><span><b>合計</b>${restTxt(tot.paypay + tot.cash, tgtSum).replace('class="note"', 'class="note" style="display:block;font-size:11px;color:var(--muted)"')}</span><span class="num">${yen(tot.paypay + tot.cash)}</span></div>
-  </div><p class="help">日々の出費の目安です。PayPayもカードの請求に入るので、月の残高の計算には使いません。${tgtSum > 0 ? '' : '目安は設定から入れられます。'}</p></section>`;
+  </div>${tgtSum > 0 ? '' : '<p class="help">目安は設定から入れられます。</p>'}</section>`;
 
   h += backupNote() + '</div>';
   app.innerHTML = h;
