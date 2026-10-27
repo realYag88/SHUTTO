@@ -158,10 +158,42 @@ tr.yr td{background:var(--bg);font-size:11px;color:var(--muted);text-align:left;
 
 /* tabs */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 .tab{background:none;border:0;padding:12px 0 14px;font-weight:700;font-size:13px;color:var(--muted);cursor:pointer;position:relative}
 .tab[aria-selected="true"]{color:var(--accent)}
 .tab[aria-selected="true"]::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+
+/* daily */
+.btn.alt{background:var(--c2);border-color:var(--c2);color:var(--surface)}
+.entry{display:grid;gap:10px}
+.entry .big{font-size:24px;padding:10px 12px}
+.paybtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.paybtns .btn{min-height:48px;font-size:15px}
+.mini{display:flex;justify-content:center;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:-4px 0 14px}
+.mini b{color:var(--ink);font-weight:600}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.dot.paypay{background:var(--accent)} .dot.cash{background:var(--c2)}
+.erow{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 10px 8px 14px;border-top:1px solid var(--line)}
+.erow:first-child{border-top:0}
+.erow .m{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.erow .p{font-size:11px;color:var(--muted)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .w{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding-bottom:2px}
+.cal .w.su{color:var(--neg)} .cal .w.sa{color:var(--c2)}
+.day{min-height:52px;border-radius:8px;border:1px solid var(--line);background:var(--surface);padding:4px 3px 3px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;text-align:left;min-width:0}
+.day .d{font-size:12px;font-weight:700;line-height:1.2;padding-left:2px}
+.day .a{font-size:10px;text-align:right;letter-spacing:-.03em;line-height:1.2;white-space:nowrap;overflow:hidden}
+.day.blank{visibility:hidden}
+.day.future{opacity:.45}
+.day.today{border:2px solid var(--accent);padding:3px 2px 2px}
+.day.sel{outline:2px solid var(--ink);outline-offset:1px}
+.day.h1{background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.day.h2{background:color-mix(in srgb,var(--accent) 30%,var(--surface))}
+.day.h3{background:color-mix(in srgb,var(--accent) 52%,var(--surface))}
+.day.h4{background:color-mix(in srgb,var(--accent) 80%,var(--surface));color:var(--surface)}
+.day.h4.today{border-color:var(--ink)}
+.calnote{font-size:11px;color:var(--muted);margin:8px 2px 0;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.calnote i{display:inline-block;width:14px;height:10px;border-radius:3px;border:1px solid var(--line)}
 
 .toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:30;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion: no-preference){
@@ -181,6 +213,7 @@ tr.yr td{background:var(--bg);font-size:11px;color:var(--muted);text-align:left;
 <nav class="tabs" aria-label="画面切り替え">
   <div class="in" role="tablist">
     <button class="tab" role="tab" id="tab-month" data-tab="month">月</button>
+    <button class="tab" role="tab" id="tab-daily" data-tab="daily">日々</button>
     <button class="tab" role="tab" id="tab-list" data-tab="list">一覧</button>
     <button class="tab" role="tab" id="tab-budget" data-tab="budget">予算</button>
     <button class="tab" role="tab" id="tab-settings" data-tab="settings">設定</button>
@@ -195,11 +228,13 @@ const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
 const validM = m => typeof m === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(m);
 function addM(m, k){ let [y, mo] = m.split('-').map(Number); mo += k; y += Math.floor((mo - 1) / 12); mo = ((mo - 1) % 12 + 12) % 12 + 1; return y + '-' + String(mo).padStart(2, '0'); }
 function uid(){ return Math.random().toString(36).slice(2, 9); }
+const validD = d => typeof d === 'string' && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d);
+const PAYS = { paypay:'PayPay', cash:'現金' };
 
 function blankState(){
   return { app:'SHUTTO', version:1,
-    settings:{ defaultIncome:0, cardEstimate:0, planUntil:null, cards:[], fixed:[] },
-    months:{}, budget:{ income:0, items:[], note:'' } };
+    settings:{ defaultIncome:0, cardEstimate:0, planUntil:null, dailyPaypay:0, dailyCash:0, cards:[], fixed:[] },
+    months:{}, daily:{}, budget:{ income:0, items:[], note:'' } };
 }
 
 function normalize(o){
@@ -208,6 +243,8 @@ function normalize(o){
   b.settings.defaultIncome = num(s.defaultIncome);
   b.settings.cardEstimate = num(s.cardEstimate);
   b.settings.planUntil = validM(s.planUntil) ? s.planUntil : null;
+  b.settings.dailyPaypay = num(s.dailyPaypay);
+  b.settings.dailyCash = num(s.dailyCash);
   b.settings.cards = (Array.isArray(s.cards) ? s.cards : []).map(c => typeof c === 'string' ? { id:uid(), name:c } : { id:String(c.id || uid()), name:String(c.name || '') });
   b.settings.fixed = (Array.isArray(s.fixed) ? s.fixed : []).map(f => ({
     id:String(f.id || uid()), name:String(f.name || ''), amount:num(f.amount),
@@ -224,6 +261,16 @@ function normalize(o){
     }
     if (r.memo) n.memo = String(r.memo);
     if (Object.keys(n).length) b.months[k] = n;
+  }
+  const ds = (o.daily && typeof o.daily === 'object') ? o.daily : {};
+  for (const k in ds){
+    if (!validD(k) || !Array.isArray(ds[k])) continue;
+    const list = ds[k].filter(e => e && isNum(e.amount)).map(e => {
+      const n = { id:String(e.id || uid()), amount:e.amount, pay:e.pay === 'cash' ? 'cash' : 'paypay' };
+      if (e.memo) n.memo = String(e.memo);
+      return n;
+    });
+    if (list.length) b.daily[k] = list;
   }
   const bu = o.budget || {};
   b.budget.income = num(bu.income);
@@ -303,8 +350,9 @@ const trackName = f => f.trackLabel || (f.name + 'の累計');
 let st, ui;
 try { st = normalize(JSON.parse(localStorage.getItem(KEY) || 'null') || blankState()); } catch(e){ st = blankState(); }
 try { ui = JSON.parse(localStorage.getItem(UIKEY) || 'null') || {}; } catch(e){ ui = {}; }
-ui.tab = ['month','list','budget','settings'].includes(ui.tab) ? ui.tab : 'month';
+ui.tab = ['month','daily','list','budget','settings'].includes(ui.tab) ? ui.tab : 'month';
 ui.month = TODAY;
+ui.day = null;
 let pendingImport = null;
 
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e){ toast('この端末に保存できませんでした。書き出しでバックアップしてください'); } }
@@ -396,6 +444,92 @@ function refreshMonth(){
   document.querySelectorAll('#app .amt').forEach(el => el.classList.toggle('set', el.value.trim() !== ''));
 }
 
+/* ---------- daily ---------- */
+const LASTEXP = 'shutto.lastExport';
+const pad2 = n => String(n).padStart(2, '0');
+function todayD(){ const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function daysIn(m){ const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); }
+function dLabel(d){ const [y, mo, da] = d.split('-').map(Number); return `${mo}月${da}日（${'日月火水木金土'[new Date(y, mo - 1, da).getDay()]}）`; }
+function defaultDay(m){ const t = todayD(); return t.startsWith(m) ? t : m + '-01'; }
+function dayTotal(d){ return (st.daily[d] || []).reduce((a, e) => a + e.amount, 0); }
+function monthDaily(m){
+  const t = { paypay:0, cash:0 };
+  for (const d in st.daily) if (d.startsWith(m + '-')) st.daily[d].forEach(e => t[e.pay] += e.amount);
+  return t;
+}
+const cellAmt = n => Math.abs(n) >= 100000 ? Math.round(n / 10000) + '万' : yen(n);
+function markExported(){ try { localStorage.setItem(LASTEXP, String(Date.now())); } catch(e){} }
+function backupNote(){
+  if (!Object.keys(st.daily).length) return '';
+  let last = 0; try { last = Number(localStorage.getItem(LASTEXP)) || 0; } catch(e){}
+  const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+  if (days !== null && days < 14) return '';
+  return `<div class="adjust" style="margin-bottom:18px">${days === null ? 'まだ一度も書き出していません。' : `最後の書き出しから${days}日たっています。`}記録はこの端末にだけ保存されているので、ときどきバックアップしてください。<div class="btns" style="margin-top:8px"><button class="btn" data-act="export">JSONを書き出す</button></div></div>`;
+}
+function viewDaily(){
+  const m = ui.month, s = st.settings, t = todayD();
+  if (!ui.day || !ui.day.startsWith(m + '-')) ui.day = defaultDay(m);
+  const d = ui.day, tot = monthDaily(m), row = rowFor(m);
+  const tgt = { paypay:num(s.dailyPaypay), cash:num(s.dailyCash) };
+  const miniPart = k => `<span><i class="dot ${k}"></i>${PAYS[k]} <b class="num">${yen(tot[k])}</b>${tgt[k] > 0 ? `<span class="num"> / ${yen(tgt[k])}</span>` : ''}</span>`;
+  let h = `<div class="mnav"><button class="iconbtn" data-act="prev" aria-label="前の月">‹</button><h1>${mLabel(m)}</h1><button class="iconbtn" data-act="next" aria-label="次の月">›</button></div>
+  <div class="mini">${miniPart('paypay')}${miniPart('cash')}</div>`;
+
+  // entry
+  h += `<section class="sec"><div class="sec-h"><h2>${dLabel(d)}${d === t ? ' ・ 今日' : ''}</h2>${d !== t ? '<button class="link" data-act="today">今日へ</button>' : ''}</div>
+  <div class="list"><div class="pad entry">
+    <input class="amt num big" id="d-amt" type="text" inputmode="numeric" autocomplete="off" placeholder="金額" aria-label="金額">
+    <input class="txt" id="d-memo" type="text" autocomplete="off" placeholder="メモ（なくてもOK）" aria-label="メモ">
+    <div class="paybtns"><button class="btn primary" data-act="addEntry" data-pay="paypay">PayPayで記録</button><button class="btn alt" data-act="addEntry" data-pay="cash">現金で記録</button></div>
+  </div></div></section>`;
+
+  // entries of the day
+  const list = st.daily[d] || [];
+  if (list.length){
+    h += `<section class="sec"><div class="sec-h"><h2>この日の記録</h2><span class="num">${yen(dayTotal(d))}</span></div><div class="list">`;
+    list.forEach(e => h += `<div class="erow"><i class="dot ${e.pay}" aria-hidden="true"></i><div class="m">${e.memo ? esc(e.memo) : `<span class="muted">${PAYS[e.pay]}</span>`}${e.memo ? `<div class="p">${PAYS[e.pay]}</div>` : ''}</div><span class="num">${yen(e.amount)}</span><button class="x" data-act="delEntry" data-d="${d}" data-id="${esc(e.id)}" aria-label="削除">×</button></div>`);
+    h += `</div></section>`;
+  }
+
+  // calendar
+  const dim = daysIn(m), [y, mo] = m.split('-').map(Number), off = new Date(y, mo - 1, 1).getDay();
+  const totals = []; for (let i = 1; i <= dim; i++) totals.push(dayTotal(m + '-' + pad2(i)));
+  const tgtSum = tgt.paypay + tgt.cash, used = totals.filter(v => v > 0);
+  const base = tgtSum > 0 ? tgtSum / dim : (used.length ? used.reduce((a, v) => a + v, 0) / used.length : 0);
+  const lvl = v => { if (v <= 0 || base <= 0) return ''; const r = v / base; return r <= .5 ? 'h1' : r <= 1 ? 'h2' : r <= 2 ? 'h3' : 'h4'; };
+  h += `<section class="sec"><div class="cal">${['日','月','火','水','木','金','土'].map((w, i) => `<div class="w${i === 0 ? ' su' : i === 6 ? ' sa' : ''}">${w}</div>`).join('')}`;
+  for (let i = 0; i < off; i++) h += `<div class="day blank" aria-hidden="true"></div>`;
+  for (let i = 1; i <= dim; i++){
+    const k = m + '-' + pad2(i), v = totals[i - 1];
+    const cls = ['day', lvl(v), k === t ? 'today' : '', k === d ? 'sel' : '', k > t ? 'future' : ''].filter(Boolean).join(' ');
+    h += `<button class="${cls}" data-act="pickDay" data-d="${k}" aria-label="${dLabel(k)} ${v ? yen(v) + '円' : '記録なし'}"${k === d ? ' aria-current="date"' : ''}><span class="d">${i}</span><span class="a num">${v ? cellAmt(v) : ''}</span></button>`;
+  }
+  h += `</div><p class="calnote"><i style="background:color-mix(in srgb,var(--accent) 14%,var(--surface))"></i><i style="background:color-mix(in srgb,var(--accent) 30%,var(--surface))"></i><i style="background:color-mix(in srgb,var(--accent) 52%,var(--surface))"></i><i style="background:color-mix(in srgb,var(--accent) 80%,var(--surface))"></i>&nbsp;${tgtSum > 0 ? `濃いほど使った日（1日の目安 <span class="num">${yen(base)}</span> が基準）` : '濃いほど使った日（今月の平均が基準）'}</p></section>`;
+
+  // month summary
+  const cardNote = row.anyCard ? '月の画面の入力' : row.cardEst ? '見込み額' : '未入力';
+  const rest = k => tgt[k] > 0 ? `<span class="note">目安 ${yen(tgt[k])} ・ ${tot[k] <= tgt[k] ? 'あと ' + yen(tgt[k] - tot[k]) : `<span class="neg">${yen(tot[k] - tgt[k])} オーバー</span>`}</span>` : '';
+  h += `<section class="sec"><div class="sec-h"><h2>${mShort(m)}のまとめ</h2></div><div class="list">
+    <div class="field"><label><span><i class="dot paypay"></i>PayPay</span>${rest('paypay')}</label><span class="num" style="text-align:right">${yen(tot.paypay)}</span></div>
+    <div class="field"><label><span><i class="dot cash"></i>現金</span>${rest('cash')}</label><span class="num" style="text-align:right">${yen(tot.cash)}</span></div>
+    <div class="field"><label>カード<span class="note">今月の引き落とし額（${cardNote}） ・<button class="link" style="padding:0;font-size:11px" data-act="tab" data-tab="month">月の画面へ</button></span></label><span class="num" style="text-align:right">${yen(row.cardTotal)}</span></div>
+    <div class="sum big"><span><b>合計</b></span><span class="num">${yen(tot.paypay + tot.cash + row.cardTotal)}</span></div>
+  </div><p class="help">PASMOのチャージはカードの請求に入るので、ここには記録しません。${tgtSum > 0 ? '' : '目安は設定から入れられます。'}</p></section>`;
+
+  h += backupNote();
+  app.innerHTML = h;
+}
+function addEntry(pay){
+  const el = $('#d-amt'), v = parseAmt(el.value);
+  if (v === null || v === 0){ toast('金額を入れてください'); el.focus(); return; }
+  const memo = $('#d-memo').value.trim(), d = ui.day;
+  const e = { id:uid(), amount:v, pay }; if (memo) e.memo = memo;
+  (st.daily[d] = st.daily[d] || []).push(e);
+  save(); render();
+  const [, mo, da] = d.split('-').map(Number);
+  toast(`${mo}/${da} ${PAYS[pay]} ${yen(v)}円を記録しました`);
+}
+
 /* ---------- list ---------- */
 function niceStep(x){ const p = Math.pow(10, Math.floor(Math.log10(x))); const f = x / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
 function chartSVG(rows, tracks){
@@ -485,6 +619,11 @@ function viewSettings(){
     <div class="field"><label for="in-plan">計画の終わり<span class="note">一覧とグラフをここまで出す</span></label><input class="txt" type="month" id="in-plan" data-bind="s:planUntil" value="${esc(s.planUntil || '')}"></div>
   </div></section>
 
+  <section class="sec"><div class="sec-h"><h2>日々の記録の目安</h2></div><div class="list">
+    <div class="field"><label for="in-s_dailyPaypay">PayPayの月の目安<span class="note">空欄なら目安なし</span></label>${amtInput('s:dailyPaypay', s.dailyPaypay || null, '0')}</div>
+    <div class="field"><label for="in-s_dailyCash">現金の月の目安<span class="note">空欄なら目安なし</span></label>${amtInput('s:dailyCash', s.dailyCash || null, '0')}</div>
+  </div><p class="help">日々の画面で「あといくら使えるか」と、カレンダーの色の基準に使います。</p></section>
+
   <section class="sec"><div class="sec-h"><h2>カード</h2></div><div class="list">`;
   s.cards.forEach(c => h += `<div class="brow" style="grid-template-columns:minmax(0,1fr) auto"><input class="txt" id="in-card-${esc(c.id)}" data-bind="card:${esc(c.id)}:name" value="${esc(c.name)}" placeholder="カード名" aria-label="カード名"><button class="x" data-act="delCard" data-id="${esc(c.id)}" aria-label="削除">×</button></div>`);
   h += `<div class="pad"><button class="btn full" data-act="addCard">＋ カードを追加</button></div></div></section>
@@ -513,18 +652,21 @@ function viewSettings(){
 }
 function showImportConfirm(data){
   pendingImport = data;
-  const n = Object.keys(data.months).length;
-  $('#o-import').innerHTML = `<div class="empty" style="margin:0"><h3>読み込み内容</h3><p>月のデータ ${n}件、カード ${data.settings.cards.length}件、固定の支出 ${data.settings.fixed.length}件。今のデータは置き換わります。</p><div class="btns"><button class="btn primary" data-act="doImport">置き換えて読み込む</button><button class="btn" data-act="cancelImport">やめる</button></div></div>`;
+  const n = Object.keys(data.months).length, dn = Object.values(data.daily).reduce((a, l) => a + l.length, 0);
+  $('#o-import').innerHTML = `<div class="empty" style="margin:0"><h3>読み込み内容</h3><p>月のデータ ${n}件、日々の記録 ${dn}件、カード ${data.settings.cards.length}件、固定の支出 ${data.settings.fixed.length}件。今のデータは置き換わります。</p><div class="btns"><button class="btn primary" data-act="doImport">置き換えて読み込む</button><button class="btn" data-act="cancelImport">やめる</button></div></div>`;
 }
 
 /* ---------- render / events ---------- */
 function render(){
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === ui.tab)));
-  ({ month:viewMonth, list:viewList, budget:viewBudget, settings:viewSettings })[ui.tab]();
+  ({ month:viewMonth, daily:viewDaily, list:viewList, budget:viewBudget, settings:viewSettings })[ui.tab]();
 }
 function setTab(t){ ui.tab = t; saveUi(); render(); window.scrollTo(0, 0); }
 document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) setTab(b.dataset.tab); });
 $('#todayLbl').textContent = `${now.getMonth() + 1}月${now.getDate()}日`;
+// ホーム画面から開き直したときに日付が変わっていたら読み直す
+const LOADED_D = todayD();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && todayD() !== LOADED_D) location.reload(); });
 
 function applyBind(bind, el){
   const p = bind.split(':'), scope = p[0];
@@ -579,9 +721,16 @@ function exportText(){ return JSON.stringify(st, null, 2); }
 app.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const a = t.dataset.act;
-  if (a === 'prev'){ ui.month = addM(ui.month, -1); render(); }
-  else if (a === 'next'){ ui.month = addM(ui.month, 1); render(); }
-  else if (a === 'today'){ ui.month = TODAY; render(); }
+  if (a === 'prev'){ ui.month = addM(ui.month, -1); ui.day = null; render(); }
+  else if (a === 'next'){ ui.month = addM(ui.month, 1); ui.day = null; render(); }
+  else if (a === 'today'){ ui.month = TODAY; ui.day = null; render(); }
+  else if (a === 'pickDay'){ ui.day = t.dataset.d; render(); }
+  else if (a === 'addEntry'){ addEntry(t.dataset.pay); }
+  else if (a === 'delEntry'){ arm(t, '削除', () => {
+    const d = t.dataset.d, l = (st.daily[d] || []).filter(e => e.id !== t.dataset.id);
+    if (l.length) st.daily[d] = l; else delete st.daily[d];
+    save(); render(); toast('記録を削除しました');
+  }); }
   else if (a === 'tab'){ setTab(t.dataset.tab); }
   else if (a === 'goImport'){ setTab('settings'); const d = $('#data'); if (d) d.scrollIntoView(); }
   else if (a === 'openMonth'){ ui.month = t.dataset.m; setTab('month'); }
@@ -602,13 +751,14 @@ app.addEventListener('click', e => {
       const blob = new Blob([exportText()], { type:'application/json' });
       const url = URL.createObjectURL(blob); const link = document.createElement('a');
       link.href = url; link.download = `shutto-${TODAY}.json`; document.body.appendChild(link); link.click(); link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000); toast('書き出しました');
+      setTimeout(() => URL.revokeObjectURL(url), 2000); markExported(); toast('書き出しました');
+      if (ui.tab === 'daily') render();
     } catch(err){ toast('書き出せませんでした。コピーを使ってください'); }
   }
   else if (a === 'copy'){
     const txt = exportText();
     const fallback = () => { const ta = $('#in-paste'); if (ta){ ta.closest('details').open = true; ta.value = txt; ta.select(); toast('選択した内容をコピーしてください'); } };
-    try { navigator.clipboard.writeText(txt).then(() => toast('JSONをコピーしました'), fallback); } catch(err){ fallback(); }
+    try { navigator.clipboard.writeText(txt).then(() => { markExported(); toast('JSONをコピーしました'); }, fallback); } catch(err){ fallback(); }
   }
   else if (a === 'pasteImport'){ try { showImportConfirm(normalize(JSON.parse($('#in-paste').value))); } catch(err){ toast('読み込めませんでした：' + (err.message || 'JSONの形式を確認してください')); } }
   else if (a === 'doImport'){ if (pendingImport){ st = pendingImport; pendingImport = null; save(); ui.month = TODAY; toast('読み込みました'); setTab('month'); } }
