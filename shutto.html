@@ -226,8 +226,8 @@ tr.yr td{background:var(--bg);font-size:11px;color:var(--muted);text-align:left;
 </div>
 <nav class="tabs" aria-label="画面切り替え">
   <div class="in" role="tablist">
-    <button class="tab" role="tab" id="tab-month" data-tab="month">月</button>
     <button class="tab" role="tab" id="tab-daily" data-tab="daily">日々</button>
+    <button class="tab" role="tab" id="tab-month" data-tab="month">月</button>
     <button class="tab" role="tab" id="tab-list" data-tab="list">一覧</button>
     <button class="tab" role="tab" id="tab-budget" data-tab="budget">予算</button>
     <button class="tab" role="tab" id="tab-settings" data-tab="settings">設定</button>
@@ -364,7 +364,7 @@ const trackName = f => f.trackLabel || (f.name + 'の累計');
 let st, ui;
 try { st = normalize(JSON.parse(localStorage.getItem(KEY) || 'null') || blankState()); } catch(e){ st = blankState(); }
 try { ui = JSON.parse(localStorage.getItem(UIKEY) || 'null') || {}; } catch(e){ ui = {}; }
-ui.tab = ['month','daily','list','budget','settings'].includes(ui.tab) ? ui.tab : 'month';
+ui.tab = 'daily'; // 開いたときは常に日々タブ・今日から
 ui.month = TODAY;
 ui.day = null;
 let pendingImport = null;
